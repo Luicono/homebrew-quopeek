@@ -22,7 +22,7 @@ The cask deliberately has no `zap` stanza. Uninstall removes the app but does no
 
 ## Direct download
 
-You can instead download the signed and notarized DMG from the [official Luicono website](https://luicono.com/downloads/QuoPeek-1.0.2.dmg).
+You can instead download the signed and notarized DMG from the [official Luicono website](https://luicono.com/downloads/QuoPeek-1.0.3.dmg).
 
 ## Release maintenance
 
