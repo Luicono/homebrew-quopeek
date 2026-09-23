@@ -1,0 +1,59 @@
+name: QuoPeek 1.0.3 isolated Homebrew validation
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  validate:
+    runs-on: macos-15
+    timeout-minutes: 15
+    env:
+      HOMEBREW_NO_ANALYTICS: '1'
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+    steps:
+      - name: Verify runner and public cask
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -m
+          sw_vers
+          test "$(uname -m)" = arm64
+          brew --version
+          test ! -e /Applications/QuoPeek.app
+          brew tap Luicono/quopeek
+          brew info --cask --json=v2 Luicono/quopeek/quopeek | tee "$RUNNER_TEMP/quopeek-cask.json"
+          ruby -rjson -e 'c=JSON.parse(File.read(ARGV[0])).fetch("casks"); abort "Unexpected cask count" unless c.size==1; c=c.first; abort "Version mismatch" unless c.fetch("version")=="1.0.3"; abort "URL mismatch" unless c.fetch("url")=="https://luicono.com/go/homebrew/quopeek/1.0.3.dmg"; abort "SHA mismatch" unless c.fetch("sha256")=="ac4bac301613400041d3bc44040a914102a935575ffaa5641f362d3442a6970e"' "$RUNNER_TEMP/quopeek-cask.json"
+      - name: Install public cask and verify identity and artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          touch "$RUNNER_TEMP/quopeek-install-attempted"
+          brew install --cask Luicono/quopeek/quopeek
+          test -d /Applications/QuoPeek.app
+          plist=/Applications/QuoPeek.app/Contents/Info.plist
+          for key in CFBundleShortVersionString CFBundleVersion CFBundleIdentifier; do
+            /usr/libexec/PlistBuddy -c "Print :$key" "$plist"
+          done
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = 1.0.3
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")" = 3
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = com.luicono.quopeek
+          dmg=$(brew --cache --cask Luicono/quopeek/quopeek)
+          test -f "$dmg"
+          shasum -a 256 "$dmg"
+          test "$(shasum -a 256 "$dmg" | awk '{print $1}')" = ac4bac301613400041d3bc44040a914102a935575ffaa5641f362d3442a6970e
+          test "$(stat -f %z "$dmg")" = 4126623
+          codesign --verify --deep --strict --verbose=2 /Applications/QuoPeek.app
+          echo 'INSTALL_IDENTITY_ARTIFACT_PASS'
+      - name: Uninstall and verify cleanup without launching app
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f "$RUNNER_TEMP/quopeek-install-attempted"; then
+            brew uninstall --cask Luicono/quopeek/quopeek
+            test ! -e /Applications/QuoPeek.app
+            test -z "$(brew list --cask --versions quopeek)"
+            echo 'UNINSTALL_CLEANUP_PASS'
+          else
+            echo 'Installation not attempted; no app cleanup needed'
+          fi
