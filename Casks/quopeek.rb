@@ -1,6 +1,6 @@
 cask "quopeek" do
-  version "1.0.2"
-  sha256 "37db9879d47484831f1ea2cc56deefc01477f1f84cc8101c5a55ad9282ebe497"
+  version "1.0.3"
+  sha256 "ac4bac301613400041d3bc44040a914102a935575ffaa5641f362d3442a6970e"
 
   url "https://luicono.com/go/homebrew/quopeek/#{version}.dmg"
   name "QuoPeek"
